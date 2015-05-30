@@ -1,25 +1,29 @@
 {
-    "name"            : "proxy-router",
-    "version"         : "0.0.1",
-    "dependencies"    : {
-        "colors"     : "^1.1.0",
-        "http-proxy" : "^1.11.1"
-    },
-    "scripts"         : {
-        "start" : "sudo node server.js"
-    },
-    "description"     : "NodeJS dynamic router for http-proxy. Handle requests to Apache, Nginx, NodeJS, and other server on port 80.",
-    "main"            : "server.js",
-    "devDependencies" : { },
-    "keywords"        : [
-        "http-proxy",
-        "router",
-        "nginx",
-        "router",
-        "apache",
-        "router",
-        "dns"
-    ],
-    "author"          : "Nanang Mahdaen El Agung <nanang@mahdaen.name> (http://mahdaen.name)",
-    "license"         : "MIT"
+  "name": "proxy-router",
+  "version": "1.1.0",
+  "dependencies": {
+    "colors": "^1.1.0",
+    "http-proxy": "^1.11.1",
+    "inquirer": "^0.8.5"
+  },
+  "scripts": {
+    "start": "sudo node server.js"
+  },
+  "bin": {
+    "proxy-router": "index.js"
+  },
+  "description": "NodeJS dynamic router for http-proxy. Handle requests to Apache, Nginx, NodeJS, and other server on port 80.",
+  "main": "server.js",
+  "devDependencies": {},
+  "keywords": [
+    "http-proxy",
+    "router",
+    "nginx",
+    "router",
+    "apache",
+    "router",
+    "dns"
+  ],
+  "author": "Nanang Mahdaen El Agung <nanang@mahdaen.name> (http://mahdaen.name)",
+  "license": "MIT"
 }
