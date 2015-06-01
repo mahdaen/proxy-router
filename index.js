@@ -253,7 +253,7 @@ var prmdefault = {
     args : '--prod'
 }
 
-var getPrompt = function(def, full) {
+var getPrompt = function (def, full) {
     /* Main Prompt */
     var lessprompt = [
         {
@@ -327,6 +327,8 @@ var getPrompt = function(def, full) {
 }
 
 /* Add Roter Handler */
+var editmode = false;
+
 var addRouter = function () {
     inquire.prompt([
         {
@@ -340,19 +342,21 @@ var addRouter = function () {
         if ( answers.type.search('NodeJS') > -1 ) {
             inquire.prompt(getPrompt(prmdefault, true), function (answers) {
                 if ( answers.host !== '' && answers.port !== '' ) {
-                    if ( ports.used.indexOf(Number(answers.port)) > -1 ) {
-                        console.log(color.red.bold('Port ') + color.bold(answers.port) + color.red.bold(' already used by other host! Adding host canceled!'));
-                        process.exit(0);
-                    }
-                    else {
-                        ports.used.push(Number(answers.port));
-                        ports.port = Number(answers.port);
+                    if ( !editmode ) {
+                        if ( ports.used.indexOf(Number(answers.port)) > -1 ) {
+                            console.log(color.red.bold('Port ') + color.bold(answers.port) + color.red.bold(' already used by other host! Adding host canceled!'));
+                            process.exit(0);
+                        }
+                        else {
+                            ports.used.push(Number(answers.port));
+                            ports.port = Number(answers.port);
 
-                        files.writeFile(portpt, JSON.stringify(ports), function (err) {
-                            if ( err ) {
-                                console.log(err);
-                            }
-                        });
+                            files.writeFile(portpt, JSON.stringify(ports), function (err) {
+                                if ( err ) {
+                                    console.log(err);
+                                }
+                            });
+                        }
                     }
 
                     hosts[ answers.host ] = {
@@ -417,19 +421,21 @@ var addRouter = function () {
         else {
             inquire.prompt(getPrompt(prmdefault), function (answers) {
                 if ( answers.host !== '' && answers.port !== '' ) {
-                    if ( ports.used.indexOf(Number(answers.port)) > -1 ) {
-                        console.log(color.red.bold('Port ') + color.bold(answers.port) + color.red.bold(' already used by other host! Adding host canceled!'));
-                        process.exit(0);
-                    }
-                    else {
-                        ports.used.push(Number(answers.port));
-                        ports.port = Number(answers.port);
+                    if ( !editmode ) {
+                        if ( ports.used.indexOf(Number(answers.port)) > -1 ) {
+                            console.log(color.red.bold('Port ') + color.bold(answers.port) + color.red.bold(' already used by other host! Adding host canceled!'));
+                            process.exit(0);
+                        }
+                        else {
+                            ports.used.push(Number(answers.port));
+                            ports.port = Number(answers.port);
 
-                        files.writeFile(portpt, JSON.stringify(ports), function (err) {
-                            if ( err ) {
-                                console.log(err);
-                            }
-                        });
+                            files.writeFile(portpt, JSON.stringify(ports), function (err) {
+                                if ( err ) {
+                                    console.log(err);
+                                }
+                            });
+                        }
                     }
 
                     hosts[ answers.host ] = {
@@ -587,9 +593,10 @@ var initialize = function () {
                     if ( hst in hosts ) {
                         var chost = hosts[ hst ];
 
+                        editmode = true;
                         prmdefault.name = hst;
 
-                        if (!chost.node) prmdefault.node = 1;
+                        if ( !chost.node ) prmdefault.node = 1;
 
                         Object.keys(chost).forEach(function (prop) {
                             if ( prop !== 'name' && prop !== 'node' ) {
