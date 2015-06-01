@@ -6,7 +6,7 @@ var http      = require('http'),
     color     = require('colors/safe');
 
 /* Collecting Hosts */
-var hosts = require('./hosts.json');
+var hosts = require('/etc/hosts.json');
 
 /* Proxy Logger */
 proxy.on('proxyRes', function (pro, req, res) {

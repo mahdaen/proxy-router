@@ -7,14 +7,32 @@ var inquire = require('inquirer'),
     files   = require('fs'),
     paths   = require('path'),
     execs   = require('child_process').exec,
-    color   = require('colors/safe'),
-    hosts   = require('./hosts.json'),
-    ports   = require('./ports.json');
+    color   = require('colors/safe');
 
 /* Getting Prefered Port */
 var origin = __dirname;
-var hostpt = paths.resolve(origin, 'hosts.json');
-var portpt = paths.resolve(origin, 'ports.json');
+var hostpt = paths.resolve('/etc/hosts.json');
+var portpt = paths.resolve('/etc/ports.json');
+
+/* Ensure Hosts json exist */
+try {
+    var st = files.statSync(hostpt);
+}
+catch ( err ) {
+    files.writeFileSync(hostpt, '{}');
+}
+
+/* Ensure Hosts json exist */
+try {
+    var st = files.statSync(portpt);
+}
+catch ( err ) {
+    files.writeFileSync(portpt, '{"used":[],"port":8000}');
+}
+
+/* Getting Hosts and Ports */
+var hosts = require(hostpt),
+    ports = require(portpt);
 
 var nport = (ports.port + 1);
 
@@ -27,7 +45,7 @@ var textHost = function () {
     var hostlist = '\r\n# $PROXY-ROUTER HOSTS START\r\n';
 
     for ( var key in hosts ) {
-        hostlist = hostlist + '127.0.0.1\t' + key + '\r\n';
+        hostlist = hostlist + (ports.defip || '127.0.0.1') + '\t' + key + '\r\n';
     }
 
     hostlist = hostlist + '# $PROXY-ROUTER HOSTS ENDS\r\n';
@@ -56,7 +74,7 @@ var startProxy = function (after) {
                 console.log('😭' + color.red.bold('  Unable to start Proxy Router!'));
             }
             else {
-                console.log('🍻' + color.red.green.bold('  Proxy Router started!'));
+                console.log('🍻' + color.red.green.bold('  Proxy Router successfully started!'));
             }
 
             if ( 'function' === typeof after ) {
@@ -82,7 +100,7 @@ var closeProxy = function (after) {
                     console.log('😭' + color.red.bold('  Unable to stop Proxy Router. Please always run proxy-router with sudo!'));
                 }
                 else {
-                    console.log('😭' + color.green.bold('  Proxy Router stopped! Why you stop me?'));
+                    console.log('😭' + color.green.bold('  Proxy Router successfully stopped! Why you stop me?'));
                 }
 
                 if ( 'function' === typeof after ) {
@@ -129,51 +147,56 @@ var saveHost = function (after) {
 var startRoutedServer = function (host, after) {
     var hinfo = hosts[ host ], starter;
 
+    /* Skip if not an NodeJS app */
     if ( !hinfo.node ) {
         console.log(color.bold(host) + color.green.bold(' is not an NodeJS App. We can\'t start it.'));
 
         return;
     }
 
-    if ( hinfo.main && files.existsSync(paths.resolve(hinfo.path, hinfo.main)) ) {
-        starter = paths.resolve(hinfo.path, hinfo.main);
-    }
-    else {
-        if ( files.existsSync(paths.resolve(hinfo.path, 'package.json')) ) {
-            var pkg = require(paths.resolve(hinfo.path, 'package.json'));
+    /* Skip if no server path defined */
+    if ( !hinfo.path ) return console.log(color.bold(host) + color.red.bold(" doesn't have server path. We can't start it!"));
 
-            if ( pkg.main && files.existsSync(paths.resolve(hinfo.path, pkg.main)) ) {
-                starter = paths.resolve(hinfo.path, pkg.main);
-            }
+    /* Ensure server path is exist */
+    var starter;
+
+    try {
+        starter = files.statSync(hinfo.path);
+
+        if ( !starter || !starter.isDirectory ) {
+            starter = false;
         }
+    }
+    catch ( err ) {
+        starter = false;
     }
 
     if ( starter ) {
-        var startcmd = 'forever -w start ' + hinfo.main;
+        /* Getting main file, start command and arguments */
+        var manfile = hinfo.main;
+        var mancmds = hinfo.cmds;
+        var manargs = hinfo.args;
 
-        if ( hinfo.args && hinfo.args != '' ) {
-            startcmd += ' ' + hinfo.args;
-        }
+        /* Solving main cases */
+        if ( !manfile || manfile === '-' ) manfile = '';
+        if ( !mancmds || manargs === '-' ) mancmds = '';
+        if ( !manargs || manargs === '-' ) manargs = '';
 
-        startcmd += ' --port=' + hinfo.port;
+        /* Creating Start Command */
+        var startcmd = 'cd ' + hinfo.path + ' && ' + mancmds + ' ' + manfile + ' ' + manargs + ' --port' + hinfo.port;
 
-        execs('cd ' + hinfo.path + ' && ' + startcmd, function (err) {
+        execs(startcmd, function (err) {
             if ( err ) {
                 console.log('😭' + color.red.bold('  Unable to start NodeJS App.'));
             }
             else {
-                console.log('🍻  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('Started!'));
+                console.log('🍻  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('Successfully started!'));
 
                 if ( 'function' === typeof after ) {
                     after.call();
                 }
             }
         });
-    }
-    else {
-        console.log(color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('is not an NodeJS App or no Starter Script defined.'));
-
-        return;
     }
 
     return;
@@ -184,12 +207,24 @@ var stopRoutedServer = function (host, after) {
     var hinfo = hosts[ host ];
 
     if ( hinfo.node && hinfo.path && hinfo.main ) {
-        execs('cd ' + hinfo.path + ' && forever stop ' + hinfo.main, function (err) {
+        /* Getting main file and stop command */
+        var manfile = hinfo.main;
+        var mancmds = hinfo.cmdo;
+
+        /* Handling unknown command and man file */
+        if ( !manfile || manfile === '-' ) manfile = '';
+        if ( !mancmds ) mancmds = 'forever stop';
+
+        /* Creating command string */
+        var command = 'cd ' + hinfo.path + ' && ' + mancmds + ' ' + manfile
+
+        /* Executing stop-server command */
+        execs(command, function (err) {
             if ( err ) {
                 console.log('😭  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('is not started yet.'));
             }
             else {
-                console.log('🍻  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('Stopped!'));
+                console.log('🍻  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('Successfully stopped!'));
 
                 if ( 'function' === typeof after ) {
                     after.call();
@@ -246,13 +281,26 @@ var addRouter = function () {
                 {
                     name    : 'starter',
                     type    : 'input',
-                    message : 'Server Starter',
+                    message : 'Main File',
                     default : 'index.js'
+                },
+                {
+                    name    : 'command',
+                    type    : 'input',
+                    message : 'Start Command',
+                    default : 'forever -w start'
+                },
+                {
+                    name    : 'destroy',
+                    type    : 'input',
+                    message : 'Stop Command',
+                    default : 'forever stop'
                 },
                 {
                     name    : 'args',
                     type    : 'input',
-                    message : 'Additional Arguments. Separated by space.'
+                    message : 'Runtime Flags',
+                    default : ''
                 },
             ], function (answers) {
                 if ( answers.host !== '' && answers.port !== '' ) {
@@ -288,6 +336,14 @@ var addRouter = function () {
 
                     if ( answers.starter ) {
                         hosts[ answers.host ].main = answers.starter;
+                    }
+
+                    if ( answers.command ) {
+                        hosts[ answers.host ].cmds = answers.command;
+                    }
+
+                    if ( answers.destroy ) {
+                        hosts[ answers.host ].cmdo = answers.destroy;
                     }
 
                     if ( answers.args && answers.args != '' ) {
@@ -372,9 +428,10 @@ var addRouter = function () {
                     /* Saving Hosts */
                     var hoststr = JSON.stringify(hosts);
                     files.writeFile(hostpt, hoststr, function (err) {
-                        if (err) {
+                        if ( err ) {
                             console.log(err);
-                        } else {
+                        }
+                        else {
                             /* Save new Hosts to /etc/hosts */
                             saveHost(function () {
                                 console.log('🍻' + color.green.bold('  New router added!'));
@@ -399,7 +456,6 @@ var remRouter = function (after) {
 
             /* Saving Hosts */
             var hoststr = JSON.stringify(hosts);
-            console.log(hoststr, hosts);
             files.writeFile(hostpt, hoststr, function (err) {
                 if ( err ) {
                     console.log(err);
@@ -407,7 +463,7 @@ var remRouter = function (after) {
                 else {
                     /* Save new Hosts */
                     saveHost(function () {
-                        console.log('🍻' + color.red.green.bold('  Router deleted!'));
+                        console.log('🍻' + color.red.green.bold('  Router successfully deleted!'));
 
                         /* Restarting Server */
                         closeProxy(function () {
@@ -430,7 +486,23 @@ var initialize = function () {
 
         switch ( commands ) {
             case '-v':
-                console.log(color.green.bold(packages.name) + ' - ' + color.bold(packages.version));
+                console.log(color.green.bold(packages.name) + ' - ' + color.bold('v' + packages.version));
+
+                break;
+            case '-h':
+                console.log('\r\n');
+                console.log('\t' + color.green(packages.name) + ' - ' + color.bold('v' + packages.version));
+                console.log('\t' + packages.description);
+                console.log('\r\n');
+                console.log('\t' + 'start \t\t\t' + 'Start Proxy Router with all registered NodeJS hosts');
+                console.log('\t' + 'stop \t\t\t' + 'Stop Proxy Router with all registered NodeJS hosts');
+                console.log('\t' + 'restart \t\t' + 'Restart Proxy Router');
+                console.log('\t' + 'list \t\t\t' + 'List all registerd hosts');
+                console.log('\t' + 'add \t\t\t' + 'Register new host to Proxy Router');
+                console.log('\t' + 'delete \t\t\t' + 'Delete host from Proxy Router and stop it (NodeJS host)');
+                console.log('\t' + 'delete-all \t\t' + 'Delete all hosts from Proxy Router and stop them (NodeJS host)');
+                console.log('\t' + 'default-ip \t\t' + 'Set default IP address');
+                console.log('\r\n');
 
                 break;
             case 'start':
@@ -456,7 +528,9 @@ var initialize = function () {
 
                 break;
             case 'list':
+                var ln = 0;
                 for ( var key in hosts ) {
+                    ln++;
                     console.log(
                         color.green.bold('\r\nHosts\t\t: ') +
                         color.bold(key) +
@@ -465,7 +539,12 @@ var initialize = function () {
                     );
                 }
 
-                console.log('\r\n');
+                if ( ln === 0 ) {
+                    console.log(color.green.bold('No proxies registered. Please register one using ') + 'sudo proxy-router add');
+                }
+                else {
+                    console.log('\r\n');
+                }
 
                 break;
             case 'add':
@@ -483,18 +562,20 @@ var initialize = function () {
 
                     var hoststr = JSON.stringify(hosts);
                     files.writeFile(hostpt, hoststr, function (err) {
-                        if (err) {
+                        if ( err ) {
                             console.log(err);
-                        } else {
-                            files.writeFile(portpt, JSON.stringify(ports), function(err) {
-                                if (err) {
+                        }
+                        else {
+                            files.writeFile(portpt, JSON.stringify(ports), function (err) {
+                                if ( err ) {
                                     console.log(err);
-                                } else {
+                                }
+                                else {
                                     for ( var key in hosts ) {
                                         stopRoutedServer(key);
                                     }
 
-                                    console.log('😭' + color.green.bold('  All router deleted.'));
+                                    console.log('😭' + color.green.bold('  All router successfully deleted.'));
 
                                     startProxy();
                                 }
@@ -504,8 +585,35 @@ var initialize = function () {
                 });
 
                 break;
+            case 'default-ip':
+                inquire.prompt([
+                    {
+                        name    : 'ipaddr',
+                        type    : 'input',
+                        message : 'Default IP Address',
+                        default : '127.0.0.1'
+                    }
+                ], function (answer) {
+                    /* Use local ip if not defined */
+                    if ( !answer.ipaddr || answer.ipaddr === '-' ) answer.ipaddr = '127.0.0.1';
+
+                    /* Change default IP */
+                    ports.defip = answer.ipaddr;
+
+                    /* Save Default IP */
+                    files.writeFile(portpt, JSON.stringify(ports), function (err) {
+                        if ( err ) {
+                            console.log(err);
+                        }
+                        else {
+                            console.log(color.green.bold('Default IP Address ') + ports.defip + ' successfully saved.');
+                        }
+                    });
+                });
+
+                break;
             default :
-                console.log('😭' + color.green.bold('  Command ') + color.bold(cliArg[ 2 ]) + color.green.bold(' is not mine.'));
+                console.log('😭' + color.green.bold('  Unknown command: ') + color.bold(cliArg[ 2 ]));
 
                 break;
         }
