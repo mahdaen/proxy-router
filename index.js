@@ -183,7 +183,7 @@ var startRoutedServer = function (host, after) {
         if ( !manargs || manargs === '-' ) manargs = '';
 
         /* Creating Start Command */
-        var startcmd = 'cd ' + hinfo.path + ' && ' + mancmds + ' ' + manfile + ' ' + manargs + ' --port' + hinfo.port;
+        var startcmd = 'cd ' + hinfo.path + ' && ' + mancmds + ' ' + manfile + ' ' + manargs + ' --port=' + hinfo.port;
 
         execs(startcmd, function (err) {
             if ( err ) {
