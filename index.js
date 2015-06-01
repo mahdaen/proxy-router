@@ -45,7 +45,8 @@ var textHost = function () {
     var hostlist = '\r\n# $PROXY-ROUTER HOSTS START\r\n';
 
     for ( var key in hosts ) {
-        hostlist = hostlist + (ports.defip || '127.0.0.1') + '\t' + key + '\r\n';
+        hostlist += (ports.defip || '127.0.0.1') + '\t' + key + '\r\n';
+        hostlist += (ports.defip || '127.0.0.1') + '\t' + (hosts[ key ].wild || 'www') + '.' + key + '\r\n';
     }
 
     hostlist = hostlist + '# $PROXY-ROUTER HOSTS ENDS\r\n';
@@ -74,7 +75,7 @@ var startProxy = function (after) {
                 console.log('😭' + color.red.bold('  Unable to start Proxy Router!'));
             }
             else {
-                console.log('🍻' + color.red.green.bold('  Proxy Router successfully started!'));
+                console.log('🍻' + color.red.green('  Proxy Router successfully started!'));
             }
 
             if ( 'function' === typeof after ) {
@@ -88,7 +89,7 @@ var startProxy = function (after) {
 var closeProxy = function (after) {
     execs('cd ' + origin + ' && forever stop server.js', function (err) {
         if ( err ) {
-            console.log('😴' + color.green.bold('  There is nothing to be stopped.'))
+            console.log('😴' + color.green('  There is nothing to be stopped.'))
 
             if ( 'function' === typeof after ) {
                 after.call();
@@ -100,7 +101,7 @@ var closeProxy = function (after) {
                     console.log('😭' + color.red.bold('  Unable to stop Proxy Router. Please always run proxy-router with sudo!'));
                 }
                 else {
-                    console.log('😭' + color.green.bold('  Proxy Router successfully stopped! Why you stop me?'));
+                    console.log('😭' + color.green('  Proxy Router successfully stopped! Why you stop me?'));
                 }
 
                 if ( 'function' === typeof after ) {
@@ -149,7 +150,7 @@ var startRoutedServer = function (host, after) {
 
     /* Skip if not an NodeJS app */
     if ( !hinfo.node ) {
-        console.log(color.bold(host) + color.green.bold(' is not an NodeJS App. We can\'t start it.'));
+        console.log(color.bold(host) + ' (' + (hinfo.path || 'Apache, Nginx, etc') + ') ' + color.green('is not an NodeJS App. We can\'t start it.'));
 
         return;
     }
@@ -190,7 +191,7 @@ var startRoutedServer = function (host, after) {
                 console.log('😭' + color.red.bold('  Unable to start NodeJS App.'));
             }
             else {
-                console.log('🍻  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('Successfully started!'));
+                console.log('🍻  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green('Successfully started!'));
 
                 if ( 'function' === typeof after ) {
                     after.call();
@@ -221,10 +222,10 @@ var stopRoutedServer = function (host, after) {
         /* Executing stop-server command */
         execs(command, function (err) {
             if ( err ) {
-                console.log('😭  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('is not started yet.'));
+                console.log('😭  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green('is not started yet.'));
             }
             else {
-                console.log('🍻  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('Successfully stopped!'));
+                console.log('🍻  ' + color.bold(host) + ' (' + hinfo.path + ') ' + color.green('Successfully stopped!'));
 
                 if ( 'function' === typeof after ) {
                     after.call();
@@ -233,7 +234,7 @@ var stopRoutedServer = function (host, after) {
         });
     }
     else {
-        console.log(color.bold(host) + ' (' + hinfo.path + ') ' + color.green.bold('is not an NodeJS App. We can\'t stop it.'));
+        console.log(color.bold(host) + ' (' + (hinfo.path || 'Apache, Nginx, etc') + ') ' + color.green('is not an NodeJS App. We can\'t stop it.'));
     }
 }
 
@@ -261,10 +262,16 @@ var addRouter = function () {
                     message : 'Host Name'
                 },
                 {
+                    name    : 'wild',
+                    type    : 'input',
+                    message : 'Domain Wildcard',
+                    default : 'www'
+                },
+                {
                     name    : 'path',
                     type    : 'input',
                     message : 'Target Host',
-                    default : '127.0.0.1'
+                    default : 'localhost'
                 },
                 {
                     name    : 'port',
@@ -325,6 +332,10 @@ var addRouter = function () {
                         path : 'NOJS'
                     }
 
+                    if ( answers.wild && answers.wild != '' ) {
+                        hosts[ answers.host ].wild = answers.wild;
+                    }
+
                     if ( answers.protocol.search('https') > -1 ) {
                         hosts[ answers.host ].sslc = true
                     }
@@ -367,7 +378,7 @@ var addRouter = function () {
                                     });
                                 });
 
-                                console.log('🍻' + color.green.bold('  New router added!'));
+                                console.log('🍻' + color.green('  New router added!'));
                             });
                         }
                     });
@@ -388,10 +399,16 @@ var addRouter = function () {
                     message : 'Host Name'
                 },
                 {
+                    name    : 'wild',
+                    type    : 'input',
+                    message : 'Domain Wildcard',
+                    default : 'www'
+                },
+                {
                     name    : 'path',
                     type    : 'input',
                     message : 'Target Host',
-                    default : '127.0.0.1'
+                    default : 'localhost'
                 },
                 {
                     name    : 'port',
@@ -418,7 +435,12 @@ var addRouter = function () {
 
                     hosts[ answers.host ] = {
                         host : answers.path,
-                        port : Number(answers.port)
+                        port : Number(answers.port),
+                        path : 'Apache, Nginx, etc'
+                    }
+
+                    if ( answers.wild && answers.wild != '' ) {
+                        hosts[ answers.host ].wild = answers.wild;
                     }
 
                     if ( answers.protocol.search('https') > -1 ) {
@@ -434,7 +456,7 @@ var addRouter = function () {
                         else {
                             /* Save new Hosts to /etc/hosts */
                             saveHost(function () {
-                                console.log('🍻' + color.green.bold('  New router added!'));
+                                console.log('🍻' + color.green('  New router added!'));
                             });
                         }
                     });
@@ -463,7 +485,7 @@ var remRouter = function (after) {
                 else {
                     /* Save new Hosts */
                     saveHost(function () {
-                        console.log('🍻' + color.red.green.bold('  Router successfully deleted!'));
+                        console.log('🍻' + color.red.green('  Router successfully deleted!'));
 
                         /* Restarting Server */
                         closeProxy(function () {
@@ -474,7 +496,7 @@ var remRouter = function (after) {
             });
         }
         else {
-            console.log('🍻' + color.red.green.bold('  There is nothing to be deleted!'));
+            console.log('🍻' + color.red.green('  There is nothing to be deleted!'));
         }
     }
 }
@@ -486,7 +508,7 @@ var initialize = function () {
 
         switch ( commands ) {
             case '-v':
-                console.log(color.green.bold(packages.name) + ' - ' + color.bold('v' + packages.version));
+                console.log(color.green(packages.name) + ' - ' + color.bold('v' + packages.version));
 
                 break;
             case '-h':
@@ -532,15 +554,15 @@ var initialize = function () {
                 for ( var key in hosts ) {
                     ln++;
                     console.log(
-                        color.green.bold('\r\nHosts\t\t: ') +
+                        color.green('\r\nHosts\t\t: ') +
                         color.bold(key) +
-                        color.green.bold('\r\nTarget Port\t: ') +
+                        color.green('\r\nTarget Port\t: ') +
                         color.bold(hosts[ key ].port)
                     );
                 }
 
                 if ( ln === 0 ) {
-                    console.log(color.green.bold('No proxies registered. Please register one using ') + 'sudo proxy-router add');
+                    console.log(color.green('No proxies registered. Please register one using ') + 'sudo proxy-router add');
                 }
                 else {
                     console.log('\r\n');
@@ -575,7 +597,7 @@ var initialize = function () {
                                         stopRoutedServer(key);
                                     }
 
-                                    console.log('😭' + color.green.bold('  All router successfully deleted.'));
+                                    console.log('😭' + color.green('  All router successfully deleted.'));
 
                                     startProxy();
                                 }
@@ -606,14 +628,14 @@ var initialize = function () {
                             console.log(err);
                         }
                         else {
-                            console.log(color.green.bold('Default IP Address ') + ports.defip + ' successfully saved.');
+                            console.log(color.green('Default IP Address ') + ports.defip + ' successfully saved.');
                         }
                     });
                 });
 
                 break;
             default :
-                console.log('😭' + color.green.bold('  Unknown command: ') + color.bold(cliArg[ 2 ]));
+                console.log('😭' + color.green('  Unknown command: ') + color.bold(cliArg[ 2 ]));
 
                 break;
         }
@@ -624,7 +646,7 @@ var initialize = function () {
 }
 
 /* Backup current Hosts */
-files.writeFile(origin + '/.hosts-bkp', sysHost, function (err) {
+files.writeFile('/etc/.hosts-bkp', sysHost, function (err) {
     if ( err ) {
         console.log('😭' + color.red.bold('  Remember to run Proxy Router with sudo (as root)'));
         process.exit(0);

@@ -19,7 +19,7 @@ var resolveWeb = function (host, port, req, res) {
         http.get(host + ':' + port, function (ping) {
             console.log(color.green('Serving ') + color.bold(req.headers.host) + color.yellow.bold(req.url) + color.green.bold(' from ') + color.blue.bold(host + ':' + port));
 
-            proxy.web(req, res, { target : host + ':' + port }, function(e) {
+            proxy.web(req, res, { target : host + ':' + port }, function (e) {
                 console.log(e);
             });
         }).on('error', function (err) {
@@ -44,17 +44,29 @@ http.createServer(function (req, res) {
     var hostname = req.headers.host.split(":")[ 0 ];
     var pathname = url.parse(req.url).pathname;
 
-    if ( hostname in hosts ) {
-        var pcl = 'http://';
+    /* Check domain wilchard and redirect it used */
+    var wild = hostname.match(/^[w\d]+\./);
 
-        if ( hosts[ hostname ].sslc ) pcl = 'https://';
-
-        resolveWeb(pcl + hosts[ hostname ].host, hosts[ hostname ].port, req, res);
+    if ( wild ) {
+        var rdhost = 'http://' + hostname.replace(/^[w\d]+\./, '') + req.url;
+        res.writeHead(302, {
+            Location : rdhost
+        });
+        res.end();
     }
     else {
-        res.writeHead(404, { 'Content-Type' : 'text/plain' });
-        res.write('Not found.');
-        res.end();
+        if ( hostname in hosts ) {
+            var pcl = 'http://';
+
+            if ( hosts[ hostname ].sslc ) pcl = 'https://';
+
+            resolveWeb(pcl + hosts[ hostname ].host, hosts[ hostname ].port, req, res);
+        }
+        else {
+            res.writeHead(404, { 'Content-Type' : 'text/plain' });
+            res.write('Not found.');
+            res.end();
+        }
     }
 }).listen(80, function () {
     console.log(color.green.bold('Proxy Router started on port ') + color.blue.bold(80));
