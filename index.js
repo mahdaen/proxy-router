@@ -149,7 +149,7 @@ var startRoutedServer = function (host, after) {
     var hinfo = hosts[ host ], starter;
 
     /* Skip if not an NodeJS app */
-    if ( !hinfo.node ) {
+    if ( 'undefined' === typeof hinfo.node ) {
         console.log(color.bold(host) + ' (' + (hinfo.path || 'Apache, Nginx, etc') + ') ' + color.green('is not an NodeJS App. We can\'t start it.'));
 
         return;
@@ -207,7 +207,7 @@ var startRoutedServer = function (host, after) {
 var stopRoutedServer = function (host, after) {
     var hinfo = hosts[ host ];
 
-    if ( hinfo.node && hinfo.path && hinfo.main ) {
+    if ( 'undefined' !== typeof hinfo.node && hinfo.path && hinfo.main ) {
         /* Getting main file and stop command */
         var manfile = hinfo.main;
         var mancmds = hinfo.cmdo;
