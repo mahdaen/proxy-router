@@ -49,7 +49,7 @@ http.createServer(function (req, res) {
 
     if ( wild ) {
         var rdhost = 'http://' + hostname.replace(/^[w\d]+\./, '') + req.url;
-        res.writeHead(302, {
+        res.writeHead(301, {
             Location : rdhost
         });
         res.end();
