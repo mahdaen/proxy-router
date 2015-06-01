@@ -238,6 +238,94 @@ var stopRoutedServer = function (host, after) {
     }
 }
 
+/* Default Prompt Value */
+var prmdefault = {
+    sslc : 0,
+    name : null,
+    wild : 'www',
+    host : 'localhost',
+    port : nport,
+    path : process.cwd(),
+    node : 0,
+    main : 'index.js',
+    cmds : 'forever -w start',
+    cmdo : 'forever stop',
+    args : '--prod'
+}
+
+var getPrompt = function(def, full) {
+    /* Main Prompt */
+    var lessprompt = [
+        {
+            name    : 'protocol',
+            type    : 'list',
+            message : 'Protocol',
+            choices : [ '⦿ http', '⦿ https' ],
+            default : def.sslc
+        },
+        {
+            name    : 'host',
+            type    : 'input',
+            message : 'Host Name',
+            default : def.name
+        },
+        {
+            name    : 'wild',
+            type    : 'input',
+            message : 'Domain Wildcard',
+            default : def.wild
+        },
+        {
+            name    : 'path',
+            type    : 'input',
+            message : 'Target Host',
+            default : def.host
+        },
+        {
+            name    : 'port',
+            type    : 'input',
+            message : 'Port',
+            default : def.port
+        }
+    ];
+
+    /* Prompt for NodeJS App */
+    var fullprompt = [
+        {
+            name    : 'location',
+            type    : 'input',
+            message : 'Location',
+            default : def.path
+        },
+        {
+            name    : 'starter',
+            type    : 'input',
+            message : 'Main File',
+            default : def.main
+        },
+        {
+            name    : 'command',
+            type    : 'input',
+            message : 'Start Command',
+            default : def.cmds
+        },
+        {
+            name    : 'destroy',
+            type    : 'input',
+            message : 'Stop Command',
+            default : def.cmdo
+        },
+        {
+            name    : 'args',
+            type    : 'input',
+            message : 'Runtime Flags',
+            default : def.args
+        },
+    ];
+
+    return full ? lessprompt.concat(fullprompt) : lessprompt;
+}
+
 /* Add Roter Handler */
 var addRouter = function () {
     inquire.prompt([
@@ -245,71 +333,12 @@ var addRouter = function () {
             name    : 'type',
             type    : 'list',
             message : 'Server Type',
-            choices : [ '⦿ NodeJS', '⦿ Apache, Nginx, Etc' ]
+            choices : [ '⦿ NodeJS', '⦿ Apache, Nginx, Etc' ],
+            default : prmdefault.node
         },
     ], function (answers) {
         if ( answers.type.search('NodeJS') > -1 ) {
-            inquire.prompt([
-                {
-                    name    : 'protocol',
-                    type    : 'list',
-                    message : 'Protocol',
-                    choices : [ '⦿ http', '⦿ https' ]
-                },
-                {
-                    name    : 'host',
-                    type    : 'input',
-                    message : 'Host Name'
-                },
-                {
-                    name    : 'wild',
-                    type    : 'input',
-                    message : 'Domain Wildcard',
-                    default : 'www'
-                },
-                {
-                    name    : 'path',
-                    type    : 'input',
-                    message : 'Target Host',
-                    default : 'localhost'
-                },
-                {
-                    name    : 'port',
-                    type    : 'input',
-                    message : 'Port',
-                    default : nport
-                },
-                {
-                    name    : 'location',
-                    type    : 'input',
-                    message : 'Location',
-                    default : process.cwd()
-                },
-                {
-                    name    : 'starter',
-                    type    : 'input',
-                    message : 'Main File',
-                    default : 'index.js'
-                },
-                {
-                    name    : 'command',
-                    type    : 'input',
-                    message : 'Start Command',
-                    default : 'forever -w start'
-                },
-                {
-                    name    : 'destroy',
-                    type    : 'input',
-                    message : 'Stop Command',
-                    default : 'forever stop'
-                },
-                {
-                    name    : 'args',
-                    type    : 'input',
-                    message : 'Runtime Flags',
-                    default : ''
-                },
-            ], function (answers) {
+            inquire.prompt(getPrompt(prmdefault, true), function (answers) {
                 if ( answers.host !== '' && answers.port !== '' ) {
                     if ( ports.used.indexOf(Number(answers.port)) > -1 ) {
                         console.log(color.red.bold('Port ') + color.bold(answers.port) + color.red.bold(' already used by other host! Adding host canceled!'));
@@ -337,11 +366,11 @@ var addRouter = function () {
                     }
 
                     if ( answers.protocol.search('https') > -1 ) {
-                        hosts[ answers.host ].sslc = true
+                        hosts[ answers.host ].sslc = 1
                     }
 
                     if ( answers.location ) {
-                        hosts[ answers.host ].node = true;
+                        hosts[ answers.host ].node = 0;
                         hosts[ answers.host ].path = answers.location;
                     }
 
@@ -386,37 +415,7 @@ var addRouter = function () {
             });
         }
         else {
-            inquire.prompt([
-                {
-                    name    : 'protocol',
-                    type    : 'list',
-                    message : 'Protocol',
-                    choices : [ '⦿ http', '⦿ https' ]
-                },
-                {
-                    name    : 'host',
-                    type    : 'input',
-                    message : 'Host Name'
-                },
-                {
-                    name    : 'wild',
-                    type    : 'input',
-                    message : 'Domain Wildcard',
-                    default : 'www'
-                },
-                {
-                    name    : 'path',
-                    type    : 'input',
-                    message : 'Target Host',
-                    default : 'localhost'
-                },
-                {
-                    name    : 'port',
-                    type    : 'input',
-                    message : 'Port',
-                    default : nport
-                }
-            ], function (answers) {
+            inquire.prompt(getPrompt(prmdefault), function (answers) {
                 if ( answers.host !== '' && answers.port !== '' ) {
                     if ( ports.used.indexOf(Number(answers.port)) > -1 ) {
                         console.log(color.red.bold('Port ') + color.bold(answers.port) + color.red.bold(' already used by other host! Adding host canceled!'));
@@ -502,6 +501,22 @@ var remRouter = function (after) {
 }
 
 /* Initialize App */
+var showHelp = function () {
+    console.log('\r\n');
+    console.log('\t' + color.green(packages.name) + ' - ' + color.bold('v' + packages.version));
+    console.log('\t' + packages.description);
+    console.log('\r\n');
+    console.log('\t' + 'start \t\t\t' + 'Start Proxy Router with all registered NodeJS hosts');
+    console.log('\t' + 'stop \t\t\t' + 'Stop Proxy Router with all registered NodeJS hosts');
+    console.log('\t' + 'restart \t\t' + 'Restart Proxy Router');
+    console.log('\t' + 'list \t\t\t' + 'List all registerd hosts');
+    console.log('\t' + 'add \t\t\t' + 'Register new host to Proxy Router');
+    console.log('\t' + 'delete \t\t\t' + 'Delete host from Proxy Router and stop it (NodeJS host)');
+    console.log('\t' + 'delete-all \t\t' + 'Delete all hosts from Proxy Router and stop them (NodeJS host)');
+    console.log('\t' + 'default-ip \t\t' + 'Set default IP address');
+    console.log('\r\n');
+}
+
 var initialize = function () {
     if ( cliArg.length >= 3 ) {
         var commands = cliArg[ 2 ];
@@ -512,19 +527,7 @@ var initialize = function () {
 
                 break;
             case '-h':
-                console.log('\r\n');
-                console.log('\t' + color.green(packages.name) + ' - ' + color.bold('v' + packages.version));
-                console.log('\t' + packages.description);
-                console.log('\r\n');
-                console.log('\t' + 'start \t\t\t' + 'Start Proxy Router with all registered NodeJS hosts');
-                console.log('\t' + 'stop \t\t\t' + 'Stop Proxy Router with all registered NodeJS hosts');
-                console.log('\t' + 'restart \t\t' + 'Restart Proxy Router');
-                console.log('\t' + 'list \t\t\t' + 'List all registerd hosts');
-                console.log('\t' + 'add \t\t\t' + 'Register new host to Proxy Router');
-                console.log('\t' + 'delete \t\t\t' + 'Delete host from Proxy Router and stop it (NodeJS host)');
-                console.log('\t' + 'delete-all \t\t' + 'Delete all hosts from Proxy Router and stop them (NodeJS host)');
-                console.log('\t' + 'default-ip \t\t' + 'Set default IP address');
-                console.log('\r\n');
+                showHelp();
 
                 break;
             case 'start':
@@ -575,6 +578,35 @@ var initialize = function () {
                 break;
             case 'delete':
                 remRouter();
+
+                break;
+            case 'edit':
+                if ( cliArg.length >= 4 ) {
+                    var hst = cliArg[ 3 ];
+
+                    if ( hst in hosts ) {
+                        var chost = hosts[ hst ];
+
+                        prmdefault.name = hst;
+
+                        if (!chost.node) prmdefault.node = 1;
+
+                        Object.keys(chost).forEach(function (prop) {
+                            if ( prop !== 'name' && prop !== 'node' ) {
+                                prmdefault[ prop ] = chost[ prop ];
+                            }
+                        });
+
+                        addRouter();
+                    }
+                    else {
+                        console.log('Hostname ' + color.red(hst) + ' is not registered.');
+                    }
+                }
+                else {
+                    console.log(color.red.bold('Hostname to be edited is required.'));
+                    showHelp();
+                }
 
                 break;
             case 'delete-all':
