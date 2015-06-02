@@ -180,7 +180,7 @@ var startRoutedServer = function (host, after) {
 
         /* Solving main cases */
         if ( !manfile || manfile === '-' ) manfile = '';
-        if ( !mancmds || manargs === '-' ) mancmds = '';
+        if ( !mancmds || mancmds === '-' ) mancmds = '';
         if ( !manargs || manargs === '-' ) manargs = '';
 
         /* Creating Start Command */
